@@ -1,95 +1,115 @@
 /*
-愤怒的锦鲤
-更新时间：2021-7-11
-备注：高速并发请求，专治偷助力。在kois环境变量中填入需要助力的pt_pin，有多个请用@符号连接
-TG学习交流群：https://t.me/cdles
-0 0 * * * https://raw.githubusercontent.com/cdle/jd_study/main/jd_angryKoi.js
+全民运动会
+更新时间：2021-7-8
+活动入口：首页右侧下方
+备注：暂时先互助，优先向前助力
+1 10 * * * https://raw.githubusercontent.com/cdle/jd_study/main/jd_olympicgames.js
 */
-const $ = new Env("愤怒的锦鲤")
-const JD_API_HOST = 'https://api.m.jd.com/client.action';
+const $ = Env("全民运动会")
 const ua = `jdltapp;iPhone;3.1.0;${Math.ceil(Math.random()*4+10)}.${Math.ceil(Math.random()*4)};${randomString(40)}`
-var kois = process.env.kois ?? ""
 let cookiesArr = []
-var packets = [];
+let cookie = ''
+let inviters = []
+let uuid = randomString(40);
 
 !(async () => {
-    if(!kois){
-        console.log("请在环境变量中填写需要助力的账号")
+    await requireConfig()
+    if (!cookiesArr[0]) {
+        $.msg($.name, '【提示】请先获取京东账号一cookie\n直接使用NobyDa的京东签到获取', 'https://bean.m.jd.com/bean/signIndex.action', {
+            "open-url": "https://bean.m.jd.com/bean/signIndex.action"
+        });
+        return;
     }
-    requireConfig()
     len = cookiesArr.length
-    for (let i = 0; i < len; i++) {
-        cookie = cookiesArr[i]
-        if(!kois){
-            if(i != 0) {
-                break
-            }
-            console.log(`默认给账号${i+1}助力`)
-        }else if(kois.indexOf(cookie.match(/pt_pin=([^; ]+)(?=;?)/) && cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1])==-1)continue
-        data = await requestApi('h5launch',cookie);
-        switch (data?.data?.result.status) {
-            case 1://火爆
-                continue;
-            case 2://已经发起过
-                break;
-            default:
-                if(data?.data?.result?.redPacketId){
-                    packets.push(data.data.result.redPacketId)
+    for (let i = 0; i < len+4; i++) {
+        if (cookiesArr[i % len]) {
+            cookie = cookiesArr[i % len];
+            $.UserName = decodeURIComponent(cookie.match(/pt_pin=([^; ]+)(?=;?)/) && cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1])
+            $.index = i + 1;
+            $.isLogin = true;
+            $.nickName = '';
+            message = '';
+            await TotalBean();
+            if (!$.isLogin) {
+                $.msg($.name, `【提示】cookie已失效`, `京东账号${$.index} ${$.nickName || $.UserName}\n请重新登录获取\nhttps://bean.m.jd.com/bean/signIndex.action`, {
+                    "open-url": "https://bean.m.jd.com/bean/signIndex.action"
+                });
+                if ($.isNode()) {
+                    await notify.sendNotify(`${$.name}cookie已失效 - ${$.UserName}`, `京东账号${$.index} ${$.UserName}\n请重新登录获取cookie`);
                 }
-                continue;
-        }   
-        data = await requestApi('h5activityIndex',cookie);
-        // console.log(data)
-        switch (data?.data?.code) {
-            case 20002://已达拆红包数量限制
-                break;
-            case 10002://活动正在进行，火爆号
-                break;
-            case 20001://红包活动正在进行，可拆
-                packets.push(data.data.result.redpacketInfo.id)
-                break;
-            default:
-                break;
-        }   
-    }
-
-    tools = cookiesArr
-    while (tools.length && packets.length) {
-        var cookie = tools.pop()
-        requestApi('jinli_h5assist',cookie, {"redPacketId":packets[0]}).then(
-            function(data){
-                desc = data?.data?.result?.statusDesc
-                if(desc && desc.indexOf("助力已满")!=-1){
-                    packets.shift()
-                    tools.unshift(cookie)
-                }else if(!desc){
-                    tools.unshift(cookie)
-                }
-                console.log(desc)
+                continue
             }
-        )
-        await $.wait(50)        
+            success = 0
+            inviters: for(var key in inviters){
+                if(inviters[key].index==i % len || inviters[key].times >= inviters[key].maxTimes){
+                    continue
+                }
+                assist = await requestApi("assist",{
+                    inviteId: inviters[key].id,
+                    type:"confirm",
+                    ss:"{\"extraData\":{\"log\":\"\",\"sceneid\":\"OY217Inviteh5\"},\"random\":\""+randomString(8)+"\"}",
+                })
+                if(!assist?.data){
+                    continue
+                }
+                switch (assist.data.bizCode) {
+                    case 0:
+                        console.log(`账号${i%len+1}助力账号${inviters[key].index+1}成功`)
+                        inviters[key].times++
+                        success++
+                        if(success>=3){
+                            break inviters
+                        }
+                        break
+                    case -403://帮过
+                        console.log(`账号${i%len+1}助力过账号${inviters[key].index+1}了`)
+                        break
+                    case -405:
+                        console.log(`账号${i%len+1}没有助力次数了`)
+                        break inviters
+                    case -1001://火爆
+                        console.log(`账号${i%len+1}是黑号`)
+                        break inviters
+                    default:
+                        break inviters
+                }
+            }
+            if(i>=len) continue
+            helpInfo = {}
+            taskInfo = await requestApi("getTaskDetail",{appSign: "1"})
+            if (!taskInfo?.data?.result?.inviteId) continue
+            helpInfo.id = taskInfo?.data?.result?.inviteId
+            taskInfo.data.result.taskVos.forEach(function (task) {
+                if(task.taskName == "邀请好友助力"){
+                    if (task.times < task.maxTimes) {
+                        helpInfo.maxTimes = task.maxTimes 
+                        helpInfo.times = task.times
+                        helpInfo.index = i%len
+                        inviters.push(helpInfo)
+                    }
+                }
+            });
+        }
     }
-})()  .catch((e) => {
-    $.log('', `❌ ${$.name}, 失败! 原因: ${e}!`, '')
-  })
-  .finally(() => {
-    $.done();
-  })
+})()
 
-function requestApi(functionId, cookie, body = {}) {
+function requestApi(functionId, params) {
+    if (!params) {
+        params = {}
+    }
     return new Promise(resolve => {
         $.post({
-            url: `${JD_API_HOST}/api?appid=jd_mp_h5&functionId=${functionId}&loginType=2&client=jd_mp_h5&clientVersion=10.0.5&osVersion=AndroidOS&d_brand=Xiaomi&d_model=Xiaomi`,
+            url: `https://api.m.jd.com/client.action?advId=olympicgames_${functionId}`,
             headers: {
-                "Cookie": cookie,
-                "origin": "https://h5.m.jd.com",
-                "referer": "https://h5.m.jd.com/babelDiy/Zeus/2NUvze9e1uWf4amBhe1AV6ynmSuH/index.html",
-                'Content-Type': 'application/x-www-form-urlencoded',
-                "X-Requested-With": "com.jingdong.app.mall",
-                "User-Agent": ua,
+                'Host': 'api.m.jd.com',
+                'accept': 'application/json, text/plain, */*',
+                'content-type': 'application/x-www-form-urlencoded',
+                'origin': 'https://wbbny.m.jd.com',
+                'accept-language': 'zh-cn',
+                'User-Agent': ua,
+                'cookie': cookie
             },
-            body: `body=${escape(JSON.stringify(body))}`,
+            body: `functionId=olympicgames_${functionId}&body=${JSON.stringify(params)}&client=wh5&clientVersion=1.0.0&uuid=${uuid}&appid=o2_act`,
         }, (_, resp, data) => {
             try {
                 data = JSON.parse(data)
@@ -118,6 +138,51 @@ function requireConfig() {
         }
         console.log(`共${cookiesArr.length}个京东账号\n`)
         resolve()
+    })
+}
+
+function TotalBean() {
+    return new Promise(async resolve => {
+        const options = {
+            "url": `https://wq.jd.com/user/info/QueryJDUserInfo?sceneval=2`,
+            "headers": {
+                "Accept": "application/json,text/plain, */*",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "zh-cn",
+                "Connection": "keep-alive",
+                "Cookie": cookie,
+                "Referer": "https://wqs.jd.com/my/jingdou/my.shtml?sceneval=2",
+                "User-Agent": $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1")
+            }
+        }
+        $.post(options, (err, resp, data) => {
+            try {
+                if (err) {
+                    console.log(`${JSON.stringify(err)}`)
+                    console.log(`${$.name} API请求失败，请检查网路重试`)
+                } else {
+                    if (data) {
+                        data = JSON.parse(data);
+                        if (data['retcode'] === 13) {
+                            $.isLogin = false; //cookie过期
+                            return
+                        }
+                        if (data['retcode'] === 0) {
+                            $.nickName = (data['base'] && data['base'].nickname) || $.UserName;
+                        } else {
+                            $.nickName = $.UserName
+                        }
+                    } else {
+                        console.log(`京东服务器返回空数据`)
+                    }
+                }
+            } catch (e) {
+                $.logErr(e, resp)
+            } finally {
+                resolve();
+            }
+        })
     })
 }
 
