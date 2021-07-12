@@ -1,3 +1,27 @@
+/*
+新财富岛
+更新时间：2021-7-11
+
+使用说明
+docker exec -it qinglong /bin/sh
+
+cd scripts
+
+npm install axios
+
+npm install date-fns
+
+exit
+先安装这两个
+
+============Loon===========
+[Script]
+cron "* 1/1 * * *" script-path=jd_cfd_new.js,tag=新财富岛
+
+*/
+
+
+
 
 const CryptoJS = require('crypto-js');
 const USER_AGENT = require('./USER_AGENTS').USER_AGENT;
