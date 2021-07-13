@@ -22,7 +22,7 @@ cron "* 1/1 * * *" script-path=jd_cfd_new.js,tag=新财富岛
 
 
 
-
+const $ = new Env('财富岛新new');
 const CryptoJS = require('crypto-js');
 const USER_AGENT = require('./USER_AGENTS').USER_AGENT;
 const axios = require('axios');

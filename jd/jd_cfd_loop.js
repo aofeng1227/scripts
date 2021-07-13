@@ -2,7 +2,7 @@
 
 cron 0 * * * * jd_cfd_loop.js
  */
-
+const $ = new Env('财富岛新loop');
 const {format} = require('date-fns');
 const axios = require('axios');
 const USER_AGENT = require('./USER_AGENTS').USER_AGENT;
