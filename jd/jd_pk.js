@@ -4,7 +4,7 @@
 0 10,11 * * *
 =================================Loon===================================
 [Script]
-cron "30 5 * * *" script-path=jd_pk.js,tag=京享值PK
+cron "0 10,11 * * *" script-path=jd_pk.js,tag=京享值PK
  */
 const $ = new Env('京享值PK');
 
