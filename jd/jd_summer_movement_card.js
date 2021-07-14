@@ -18,7 +18,7 @@ const REG_ENTRY = /(__webpack_require__\(__webpack_require__.s=)(\d+)(?=\)})/;
 const needModuleId = 356
 const DATA = {appid:'50085',sceneid:'OY217hPageh5'};
 let smashUtils;
-const UA = $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : `jdpingou;iPhone;10.0.6;${Math.ceil(Math.random()*2+12)}.${Math.ceil(Math.random()*4)};${randomString(40)};`) : ($.getdata('JDUA') ? $.getdata('JDUA') : `jdpingou;iPhone;10.0.6;${Math.ceil(Math.random()*2+12)}.${Math.ceil(Math.random()*4)};${randomString(40)};`)
+const UA =  `jdpingou;iPhone;10.0.6;${Math.ceil(Math.random()*2+12)}.${Math.ceil(Math.random()*4)};${randomString(40)};`;
 class MovementFaker {
   constructor(cookie) {this.cookie = cookie;this.ua = UA;}
   async run() {if (!smashUtils) {await this.init();}
@@ -86,6 +86,7 @@ if ($.isNode()) {
   for (let i = 0; i < cookiesArr.length; i++) {
     if (cookiesArr[i]) {
       $.cookie = cookiesArr[i];
+      uuid = getUUID();
       $.UserName = decodeURIComponent($.cookie.match(/pt_pin=([^; ]+)(?=;?)/) && $.cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1]);
       $.index = i + 1;
       $.isLogin = true;
@@ -112,8 +113,8 @@ if ($.isNode()) {
 
 })().catch((e) => {$.log('', `❌ ${$.name}, 失败! 原因: ${e}!`, '')}).finally(() => {$.done();})
 
-
 async function main(){
+  console.log(UA);
   $.homeData = {};
   $.taskList = [];
   await takePostRequest('olympicgames_home');
@@ -133,14 +134,14 @@ async function main(){
   }
   bubbleInfos = $.homeData.result.bubbleInfos;
   let runFlag = false;
-  for(let item of bubbleInfos){
-    if(item.type != 7){
-      $.collectId = item.type
-      await takePostRequest('olympicgames_collectCurrency');
-      await $.wait(1000);
-      runFlag = true;
-    }
-  }
+  // for(let item of bubbleInfos){
+  //   if(item.type != 7){
+  //     $.collectId = item.type
+  //     await takePostRequest('olympicgames_collectCurrency');
+  //     await $.wait(1000);
+  //     runFlag = true;
+  //   }
+  // }
   await $.wait(1000);
   await takePostRequest('olympicgames_getTaskDetail');
   await $.wait(1000);
@@ -162,13 +163,14 @@ async function main(){
 async function getBody($) {const zf = new MovementFaker($.cookie);const ss = await zf.run();return ss;}
 
 async function doTask(){
+  $.runFlag = true;
   //做任务
-  for (let i = 0; i < $.taskList.length; i++) {
+  for (let i = 0; i < $.taskList.length && $.runFlag; i++) {
     $.oneTask = $.taskList[i];
     if (($.oneTask.taskType === 21 || $.oneTask.taskType === 26) && $.oneTask.status === 1){
       console.log(`尝试领取已经是会员的奖励`);
       $.activityInfoList = $.oneTask.brandMemberVos ;
-      for (let j = 0; j < $.activityInfoList.length; j++) {
+      for (let j = 0; j < $.activityInfoList.length && $.runFlag; j++) {
         $.oneActivityInfo = $.activityInfoList[j];
         if ($.oneActivityInfo.status !== 1 || !$.oneActivityInfo.taskToken) {
           continue;
@@ -181,6 +183,9 @@ async function doTask(){
           await $.wait(2000);
         }else{
           console.log(`任务失败,${$.callbackInfo.data.bizMsg || ''}`);
+          if($.callbackInfo.data.bizMsg === '活动太火爆了'){
+            $.runFlag = false;
+          }
           await $.wait(3000);
         }
       }
@@ -236,6 +241,7 @@ async function takePostRequest(type) {
   }else{
     myRequest['url'] = `https://api.m.jd.com/client.action?advId=${type}`;
   }
+  //console.log(JSON.stringify(myRequest));
   return new Promise(async resolve => {
     $.post(myRequest, (err, resp, data) => {
       try {
@@ -249,7 +255,16 @@ async function takePostRequest(type) {
     })
   })
 }
-
+function getUUID() {
+  var n = (new Date).getTime();
+  let uuid="xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+  uuid = uuid.replace(/[xy]/g, function (e) {
+    var t = (n + 16 * Math.random()) % 16 | 0;
+    return n = Math.floor(n / 16),
+      ("x" == e ? t : 3 & t | 8).toString(16)
+  }).replace(/-/g, "")
+  return uuid
+}
 async function dealReturn(type, data) {
   try {
     data = JSON.parse(data);
@@ -380,7 +395,7 @@ async function getPostBody(type) {
   return new Promise(async resolve => {
     let taskBody = '';
     try {
-      const log = await getBody($)
+      const log = await getBody($);
       if (type === 'help') {
         taskBody = `functionId=olympicgames_assist&body=${JSON.stringify({"inviteId":$.inviteId,"type": "confirm","ss" :log})}&client=wh5&clientVersion=1.0.0&uuid=${uuid}&appid=o2_act`
       } else if (type === 'olympicgames_collectCurrency') {
