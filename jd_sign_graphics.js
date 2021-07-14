@@ -8,8 +8,8 @@ npm i png-js 或者 npm i png-js -S
 cron "14 10 * * *" script-path=jd_sign_graphics.js,tag=京东签到图形验证
 */
 
-const validator = require('./aofeng1227_scripts_jd_JDJRValidator_Pure.js');
-const Faker=require('./aofeng1227_scripts_jd_sign_graphics_validate.js') 
+const validator = require('./jd_JDJRValidator_Pure.js');
+const Faker=require('./jd_sign_graphics_validate.js') 
 
 const $ = new Env('京东签到图形验证');
 const notify = $.isNode() ? require('./sendNotify') : '';
