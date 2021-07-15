@@ -240,7 +240,7 @@ function taskUrl(turnTableId) {
 }
 
 function tasPostkUrl(turnTableId) {
-  const url = `https://jdjoy.jd.com/api/turncard/channel/sign?turnTableId=${turnTableId}&fp=${fp}&eid=${eid}&invokeKey=NRp8OPxZMFXmGkaE`
+  const url = `https://jdjoy.jd.com/api/turncard/channel/sign?turnTableId=${turnTableId}&fp=${fp}&eid=${eid}&invokeKey=qRKHmL4sna8ZOP9F`
   return {
     url,
     headers: {
