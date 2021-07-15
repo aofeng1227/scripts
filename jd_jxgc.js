@@ -2,10 +2,7 @@
 #自定义商品变量
 export shopid="1598"   ##你要商品ID 冰箱
 export shopid1="1607"  ##你要商品ID 茅台
-定时 58,59,0 18,19 * * *  可以自行设置
-=================================Loon===================================
-[Script]
-cron "58,59,0 18,19 * * *" script-path=jd_jxgc.js,tag=柠檬惊喜工厂抢茅台
+0 18,19 * * *  jd_jxgc.js
 */
 const $ = new Env('柠檬惊喜工厂抢茅台');
 const notify = $.isNode() ? require('./sendNotify') : '';
