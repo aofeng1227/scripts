@@ -35,7 +35,7 @@ let countlaunch = 0;
 let countreceive = 0;
 let bcomplate = false;
 //是否开箱开关。true 为自动开箱，注意PK开箱豆子有时效性。有需要再开了用。默认关闭；
-let kaixiang=false;
+let kaixiang=true;
 if ($.isNode()) {
     Object.keys(jdCookieNode).forEach((item) => {
         cookiesArr.push(jdCookieNode[item]);
