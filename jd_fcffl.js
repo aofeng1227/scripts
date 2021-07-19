@@ -1,11 +1,11 @@
 /*
 [task_local]
 #翻翻乐
-1 0-23/1 * 6 * 
+1 0-23/1 * * *
 
 ================Loon==============
 [Script]
-cron "1 0-23/1 * 6 * " script-path=jd_fcffl.js,tag=发财翻翻乐
+cron "1 0-23/1 * * *" script-path=jd_fcffl.js,tag=发财翻翻乐
 */
 const $ = new Env('发财翻翻乐');
 //Node.js用户请在jdCookie.js处填写京东ck;
