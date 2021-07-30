@@ -4,12 +4,12 @@
 一次性脚本，用完删除
 tg学习交流群https://t.me/cdles
 */
-const $ = Env("dogs_employ")
+const $ = new Env("汪汪乐园开工位")
 const ua = `jdltapp;iPhone;3.1.0;${Math.ceil(Math.random()*4+10)}.${Math.ceil(Math.random()*4)};${randomString(40)}`
 let cookiesArr = []
 let cookie = ''
 let inviters = []
-let helpNum = 7;//默认帮助前七个好友，其他自行修改
+let helpNum = 9;//默认帮助前七个好友，其他自行修改
 let inviter = {};
 
 !(async () => {
