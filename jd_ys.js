@@ -1,29 +1,25 @@
 /*
-领券中心签到
+预售福利机
 
-@感谢 ddo 提供sign算法
-@感谢 匿名大佬 提供pin算法
-
-活动入口：领券中心
-更新时间：2021-08-23
+活动入口：https://prodev.m.jd.com/mall/active/3QvpPkepEuB5hRgtQvWJ2bjRTCA8/index.html
 已支持IOS双京东账号,Node.js支持N个京东账号
 脚本兼容: QuantumultX, Surge, Loon, JSBox, Node.js
 ============Quantumultx===============
 [task_local]
-#领券中心签到
-15 0 * * * https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ccSign.js, tag=领券中心签到, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/jd.png, enabled=true
+#预售福利机
+5 0,2 * * * https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ys.js, tag=预售福利机, img-url=https://raw.githubusercontent.com/Orz-3/mini/master/Color/jd.png, enabled=true
 
 ================Loon==============
 [Script]
-cron "15 0 * * *" script-path=https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ccSign.js,tag=领券中心签到
+cron "5 0,2 * * *" script-path=https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ys.js,tag=预售福利机
 
 ===============Surge=================
-领券中心签到 = type=cron,cronexp="15 0 * * *",wake-system=1,timeout=3600,script-path=https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ccSign.js
+预售福利机 = type=cron,cronexp="5 0,2 * * *",wake-system=1,timeout=3600,script-path=https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ys.js
 
 ============小火箭=========
-领券中心签到 = type=cron,script-path=https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ccSign.js, cronexpr="15 0 * * *", timeout=3600, enable=true
+预售福利机 = type=cron,script-path=https://raw.githubusercontent.com/Aaron-lv/sync/jd_scripts/jd_ys.js, cronexpr="5 0,2 * * *", timeout=3600, enable=true
  */
-const $ = new Env('领券中心签到');
+const $ = new Env('预售福利机');
 const notify = $.isNode() ? require('./sendNotify') : '';
 //Node.js用户请在jdCookie.js处填写京东ck;
 const jdCookieNode = $.isNode() ? require('./utils/jdCookie.js') : '';
@@ -38,7 +34,7 @@ if ($.isNode()) {
 } else {
   cookiesArr = [$.getdata('CookieJD'), $.getdata('CookieJD2'), ...jsonParse($.getdata('CookiesJD') || "[]").map(item => item.cookie)].filter(item => !!item);
 }
-const JD_API_HOST = 'https://api.m.jd.com/client.action';
+const JD_API_HOST = 'https://www.kmg-jd.com/api';
 let allMessage = '';
 !(async () => {
   if (!cookiesArr[0]) {
@@ -63,7 +59,7 @@ let allMessage = '';
         }
         continue
       }
-      await jdSign()
+      await jdYs()
       await $.wait(2000)
     }
   }
@@ -75,71 +71,41 @@ let allMessage = '';
       $.done();
     })
 
-async function jdSign() {
-  await getCouponConfig()
+async function jdYs() {
+  await getActiveInfo()
+  if (!$.appId) return
+  await getToken()
+  if (!$.Authorization) return
+  await active()
+  await active('', false)
 }
 
-async function getCouponConfig() {
-  let functionId = `getCouponConfig`
-  let body = escape(JSON.stringify({"childActivityUrl":"openapp.jdmobile://virtual?params={\"category\":\"jump\",\"des\":\"couponCenter\"}","incentiveShowTimes":0,"monitorRefer":"","monitorSource":"ccresource_android_index_config","pageClickKey":"Coupons_GetCenter","rewardShowTimes":0,"sourceFrom":"1"}))
-  let uuid = randomString(16)
-  let sign = await getSign(functionId, decodeURIComponent(body), uuid)
-  let url = `${JD_API_HOST}?functionId=${functionId}&client=android&clientVersion=10.1.2&uuid=${uuid}&${sign}`
+async function getActiveInfo(url = 'https://prodev.m.jd.com/mall/active/3QvpPkepEuB5hRgtQvWJ2bjRTCA8/index.html') {
+  let options = {
+    url,
+    headers: {
+      "Host": "prodev.m.jd.com",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "User-Agent": $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./utils/USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1"),
+      "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cookie": cookie
+    }
+  }
   return new Promise(async resolve => {
-    $.post(taskUrl(url, body), async (err, resp, data) => {
+    $.get(options, async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${JSON.stringify(err)}`)
-          console.log(`${$.name} getCouponConfig API请求失败，请检查网路重试`)
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} getActiveInfo API请求失败，请检查网路重试`)
         } else {
           if (data) {
-            data = JSON.parse(data)
-            let functionId, body
-            if (data.result.couponConfig.signNecklaceDomain) {
-              if (data.result.couponConfig.signNecklaceDomain.roundData.ynSign === '1') {
-                console.log(`签到失败：今日已签到~`)
-              } else {
-                let pin = await getsecretPin($.UserName)
-                functionId = `ccSignInNecklace`
-                body = escape(JSON.stringify({"childActivityUrl":"openapp.jdmobile://virtual?params={\"category\":\"jump\",\"des\":\"couponCenter\"}","monitorRefer":"appClient","monitorSource":"cc_sign_android_index_config","pageClickKey":"Coupons_GetCenter","sessionId":"","signature":data.result.couponConfig.signNecklaceDomain.signature,"pin":pin,"verifyToken":""}))
+            data = JSON.parse(data && data.match(/window\.performance.mark\(e\)}}\((.*)\);<\/script>/)[1])
+            for (let key of Object.keys(data.codeFloors)) {
+              let vo = data.codeFloors[key]
+              if (vo.boardParams && vo.boardParams.appId) {
+                $.appId = vo.boardParams.appId
               }
-            } else {
-              if (data.result.couponConfig.signNewDomain.roundData.ynSign === '1') {
-                console.log(`签到失败：今日已签到~`)
-              } else {
-                let pin = await getsecretPin($.UserName)
-                functionId = `ccSignInNew`
-                body = escape(JSON.stringify({"childActivityUrl":"openapp.jdmobile://virtual?params={\"category\":\"jump\",\"des\":\"couponCenter\"}","monitorRefer":"appClient","monitorSource":"cc_sign_android_index_config","pageClickKey":"Coupons_GetCenter","pin":pin}))
-              }
-            }
-            if (functionId && body) await ccSign(functionId, body)
-          }
-        }
-      } catch (e) {
-        $.logErr(e, resp)
-      } finally {
-        resolve();
-      }
-    })
-  })
-}
-async function ccSign(functionId, body) {
-  let uuid = randomString(16)
-  let sign = await getSign(functionId, decodeURIComponent(body), uuid)
-  let url = `${JD_API_HOST}?functionId=${functionId}&client=android&clientVersion=10.1.2&uuid=${uuid}&${sign}`
-  return new Promise(async resolve => {
-    $.post(taskUrl(url, body), async (err, resp, data) => {
-      try {
-        if (err) {
-          console.log(`${JSON.stringify(err)}`)
-          console.log(`${$.name} ccSign API请求失败，请检查网路重试`)
-        } else {
-          if (data) {
-            data = JSON.parse(data)
-            if (data.busiCode === '0') {
-              console.log(functionId === 'ccSignInNew' ? `签到成功：获得 ${data.result.signResult.signData.amount} 红包` : `签到成功：获得 ${data.result.signResult.signData.necklaceScore} 点点券，${data.result.signResult.signData.amount}`)
-            } else {
-              console.log(`签到失败：${data.message}`)
             }
           }
         }
@@ -151,70 +117,175 @@ async function ccSign(functionId, body) {
     })
   })
 }
-function getSign(functionid, body, uuid) {
+
+async function getToken() {
   return new Promise(async resolve => {
-    let data = {
-      "functionId":functionid,
-      "body":body,
-      "uuid":uuid,
-      "client":"android",
-      "clientVersion":"10.1.2"
-    }
-    let HostArr = ['jdsign.cf', 'signer.nz.lu']
-    let Host = HostArr[Math.floor((Math.random() * HostArr.length))]
     let options = {
-      url: `https://cdn.nz.lu/ddo`,
-      body: JSON.stringify(data),
+      url: `https://jdjoy.jd.com/saas/framework/encrypt/pin?appId=${$.appId}`,
       headers: {
-        Host,
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
-      },
-      timeout: 30 * 1000
+        "Host": "jdjoy.jd.com",
+        "Accept": "application/json, text/plain, */*",
+        "Origin": "https://prodev.m.jd.com",
+        "Referer": "https://prodev.m.jd.com/",
+        "Accept-Encoding": "gzip, deflate, br",
+        "User-Agent": $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./utils/USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1"),
+        "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+        "Cookie": cookie
+      }
     }
-    $.post(options, (err, resp, data) => {
+    $.post(options, async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${JSON.stringify(err)}`)
-          console.log(`${$.name} getSign API请求失败，请检查网路重试`)
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} getToken API请求失败，请检查网路重试`)
         } else {
-
+          if (safeGet(data)) {
+            data = JSON.parse(data)
+            if (data.success) {
+              $.lkToken = data.data.lkToken
+              await verify($.lkToken)
+            }
+          }
         }
       } catch (e) {
         $.logErr(e, resp)
       } finally {
-        resolve(data);
+        resolve();
       }
     })
   })
 }
-function getsecretPin(pin) {
-  return new Promise(async resolve => {
-    let data = {
-      "pt_pin": pin
-    }
-    let HostArr = ['jdsign.cf', 'signer.nz.lu']
-    let Host = HostArr[Math.floor((Math.random() * HostArr.length))]
-    let options = {
-      url: `https://cdn.nz.lu/pin`,
-      body: JSON.stringify(data),
-      headers: {
-        Host,
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
-      },
-      timeout: 30 * 1000
-    }
-    $.post(options, (err, resp, data) => {
+function verify(lkToken) {
+  return new Promise(resolve => {
+    $.post(taskUrl(`user/verify`, {"parameters":{"userId":"","lkToken":lkToken,"username":"sdfas"}}), async (err, resp, data) => {
       try {
         if (err) {
-          console.log(`${JSON.stringify(err)}`)
-          console.log(`${$.name} getsecretPin API请求失败，请检查网路重试`)
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} verify API请求失败，请检查网路重试`)
         } else {
-
+          if (safeGet(data)) {
+            data = JSON.parse(data)
+            if (data.code === 200) {
+              $.Authorization = data.token
+            } else if (data.code === 403) {
+              console.log(`活动太火爆了，还是去买买买吧！！！`)
+            }
+          }
         }
       } catch (e) {
         $.logErr(e, resp)
       } finally {
-        resolve(data);
+        resolve();
+      }
+    })
+  })
+}
+function active(shareId = null, type = true) {
+  return new Promise(resolve => {
+    $.post(taskUrl(`presaleGift/active`, {"attributes":{"activeId":"presaleGiftD9gBzawG","shareId":shareId,"lkToken":$.lkToken,"valueDay":new Date().Format("yyyyMMdd")}}), async (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} active API请求失败，请检查网路重试`)
+        } else {
+          if (safeGet(data)) {
+            data = JSON.parse(data)
+            if (data.code === 200) {
+              if (type) {
+                if (!shareId) {
+                  $.joinId = data.data.userVO.joinId
+                  for (let key of Object.keys(data.data.jobMap)) {
+                    let vo = data.data.jobMap[key]
+                    if (key === "sign" || key === "channel" || key === "viewLive" || key === "viewWare" || key === "followShop") {
+                      for (let details of vo.details) {
+                        console.log(`去做【${details.title}】`)
+                        if (!details.done) {
+                          await job(vo.jobForm, details.config)
+                          if (key === "viewLive" || key === "viewWare") {
+                            await $.wait(5 * 1000)
+                          } else {
+                            await $.wait(2 * 1000)
+                          }
+                        } else {
+                          console.log(`任务已完成`)
+                        }
+                      }
+                    }
+                  }
+                }
+              } else {
+                let num = Math.floor(data.data.userVO.points / data.data.needDrawPoints)
+                if (num === 0) {
+                  console.log(`\n无可抽奖次数`)
+                } else {
+                  console.log(`\n抽奖次数：${num}，开始抽奖`)
+                }
+                for (let i = 0; i < num; i++) {
+                  await lottery()
+                  await $.wait(2000)
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        $.logErr(e, resp)
+      } finally {
+        resolve();
+      }
+    })
+  })
+}
+function job(jobForm, jobDetail) {
+  return new Promise(resolve => {
+    $.post(taskUrl(`presaleGift/job`, {"attributes":{"activeId":"presaleGiftD9gBzawG","joinId":$.joinId,"jobForm":jobForm,"jobDetail":jobDetail,"valueDay":new Date().Format("yyyyMMdd")}}), async (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} job API请求失败，请检查网路重试`)
+        } else {
+          if (safeGet(data)) {
+            data = JSON.parse(data)
+            if (data.code === 200) {
+              console.log(data.data.signDays > 0 ? `签到成功：签到${data.data.signDays}天，获得${data.data.val}金币` : `完成成功：获得${data.data.val}金币`)
+            } else {
+              console.log(`完成失败：${data.msg}`)
+            }
+          }
+        }
+      } catch (e) {
+        $.logErr(e, resp)
+      } finally {
+        resolve();
+      }
+    })
+  })
+}
+function lottery() {
+  return new Promise(resolve => {
+    $.post(taskUrl(`presaleGift/lottery`, {"attributes":{"activeId":"presaleGiftD9gBzawG","joinId":$.joinId,"lotteryForm":0}}), async (err, resp, data) => {
+      try {
+        if (err) {
+          console.log(JSON.stringify(err))
+          console.log(`${$.name} lottery API请求失败，请检查网路重试`)
+        } else {
+          if (safeGet(data)) {
+            data = JSON.parse(data)
+            if (data.code === 200) {
+              if (data.data) {
+                console.log(`抽奖成功：获得${data.data.awardVal}${data.data.awardName}`)
+              } else {
+                console.log(`抽奖成功：获得空气~`)
+              }
+            } else {
+              console.log(`抽奖失败：${data.msg}`)
+            }
+          }
+        }
+      } catch (e) {
+        $.logErr(e, resp)
+      } finally {
+        resolve();
       }
     })
   })
@@ -231,29 +302,23 @@ function showMsg() {
   })
 }
 
-function taskUrl(url, body) {
+function taskUrl(functionId, body) {
   return {
-    url,
-    body: `body=${body}`,
+    url: `${JD_API_HOST}/${functionId}`,
+    body: JSON.stringify(body),
     headers: {
-      "Host": "api.m.jd.com",
-      "Connection": "keep-alive",
-      "User-Agent": "okhttp/3.12.1;jdmall;android;version/10.1.2;build/89743;screen/1080x2030;os/9;network/wifi;",
-      "Accept": "*/*",
-      "Referer": "https://h5.m.jd.com/rn/42yjy8na6pFsq1cx9MJQ5aTgu3kX/index.html",
-      "Accept-Encoding": "gzip, deflate",
-      "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-      "Cookie": cookie,
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+      "Host": "www.kmg-jd.com",
+      "Accept": "application/json, text/plain, */*",
+      "Origin": "https://www.kmg-jd.com",
+      "Content-Type": "application/json;charset=UTF-8",
+      "Authorization": $.Authorization ? $.Authorization : "null",
+      "Referer": "https://www.kmg-jd.com/presaleGift/index.html",
+      "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+      "User-Agent": $.isNode() ? (process.env.JD_USER_AGENT ? process.env.JD_USER_AGENT : (require('./utils/USER_AGENTS').USER_AGENT)) : ($.getdata('JDUA') ? $.getdata('JDUA') : "jdapp;iPhone;9.4.4;14.3;network/4g;Mozilla/5.0 (iPhone; CPU iPhone OS 14_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1"),
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cookie": cookie
     }
   }
-}
-function randomString(e) {
-  e = e || 32;
-  let t = "abcdefghijklmnopqrstuvwxyz0123456789", a = t.length, n = "";
-  for (let i = 0; i < e; i++)
-    n += t.charAt(Math.floor(Math.random() * a));
-  return n
 }
 
 function TotalBean() {
@@ -296,6 +361,20 @@ function TotalBean() {
       }
     })
   })
+}
+Date.prototype.Format = function (fmt) { //author: meizz
+  var o = {
+    "M+": this.getMonth() + 1, //月份
+    "d+": this.getDate(), //日
+    "h+": this.getHours(), //小时
+    "m+": this.getMinutes(), //分
+    "s+": this.getSeconds(), //秒
+    "S": this.getMilliseconds() //毫秒
+  };
+  if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+  for (var k in o)
+    if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+  return fmt;
 }
 function safeGet(data) {
   try {
