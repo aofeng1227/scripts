@@ -23,7 +23,7 @@ const notify = $.isNode() ? require('./sendNotify') : '';
 const jdCookieNode = $.isNode() ? require('./jdCookie.js') : '';
 //自动抽奖 ，环境变量  JD_CITY_EXCHANGE
 let exchangeFlag = $.isNode() ? (process.env.JD_CITY_EXCHANGE === "true" ? true : false) : ($.getdata('jdJxdExchange') === "true" ? true : false)  //是否开启自动抽奖，建议活动快结束开启，默认关闭
-let helpPool = $.isNode() ? (process.env.JD_CITY_HELPPOOL === "false" ? false : true) : ($.getdata('JD_CITY_HELPPOOL') === "false" ? false : true) //是否全部助力助力池开关，默认开启
+let helpPool = $.isNode() ? (process.env.JD_CITY_HELPPOOL === "true" ? false : true) : ($.getdata('JD_CITY_HELPPOOL') === "true" ? false : true) //是否全部助力助力池开关，默认开启
 //IOS等用户直接用NobyDa的jd cookie
 let cookiesArr = [], cookie = '', message;
 let uuid;
